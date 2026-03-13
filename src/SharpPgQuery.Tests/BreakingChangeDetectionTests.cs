@@ -57,6 +57,15 @@ namespace SharpPgQuery.Tests
             "OBJECT_COLUMN",
         };
 
+        private enum BreakingStatementKind
+        {
+            Unknown,
+            AlterTable,
+            Rename,
+            Drop,
+            Update,
+        }
+
         public static IReadOnlyList<string> GetBreakingChanges(string sql)
         {
             var reasons = new List<string>();
@@ -79,18 +88,19 @@ namespace SharpPgQuery.Tests
 
                 foreach (var node in stmt.EnumerateObject())
                 {
-                    switch (node.Name)
+                    var kind = ResolveStatementKind(node.Name);
+                    switch (kind)
                     {
-                        case "AlterTableStmt":
+                        case BreakingStatementKind.AlterTable:
                             AnalyzeAlterTable(node.Value, reasons);
                             break;
-                        case "RenameStmt":
+                        case BreakingStatementKind.Rename:
                             AnalyzeRename(node.Value, reasons);
                             break;
-                        case "DropStmt":
+                        case BreakingStatementKind.Drop:
                             reasons.Add("DROP statement changes existing schema");
                             break;
-                        case "UpdateStmt":
+                        case BreakingStatementKind.Update:
                             reasons.Add("UPDATE rewrites data");
                             break;
                     }
@@ -99,6 +109,16 @@ namespace SharpPgQuery.Tests
 
             return reasons;
         }
+
+        private static BreakingStatementKind ResolveStatementKind(string nodeName) =>
+            nodeName switch
+            {
+                "AlterTableStmt" => BreakingStatementKind.AlterTable,
+                "RenameStmt" => BreakingStatementKind.Rename,
+                "DropStmt" => BreakingStatementKind.Drop,
+                "UpdateStmt" => BreakingStatementKind.Update,
+                _ => BreakingStatementKind.Unknown,
+            };
 
         private static void AnalyzeAlterTable(JsonElement alterTable, List<string> reasons)
         {
