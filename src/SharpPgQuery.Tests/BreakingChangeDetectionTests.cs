@@ -57,15 +57,6 @@ namespace SharpPgQuery.Tests
             "OBJECT_COLUMN",
         };
 
-        private enum BreakingStatementKind
-        {
-            Unknown,
-            AlterTable,
-            Rename,
-            Drop,
-            Update,
-        }
-
         public static IReadOnlyList<string> GetBreakingChanges(string sql)
         {
             var reasons = new List<string>();
@@ -77,48 +68,32 @@ namespace SharpPgQuery.Tests
                 return reasons;
             }
 
-            var rootJson = tree.GetRoot().RawJson;
-            if (!rootJson.TryGetProperty("stmts", out var stmts) || stmts.ValueKind != JsonValueKind.Array)
-                return reasons;
+            var statementNodes = tree.GetRoot()
+                .DescendantNodes()
+                .Where(n => n.Kind == Syntax.PgSyntaxKind.Statement)
+                .SelectMany(n => n.ChildNodes); // actual statements inside the wrapper
 
-            foreach (var stmtWrapper in stmts.EnumerateArray())
+            foreach (var node in statementNodes)
             {
-                if (!stmtWrapper.TryGetProperty("stmt", out var stmt))
-                    continue;
-
-                foreach (var node in stmt.EnumerateObject())
+                switch (node.Kind)
                 {
-                    var kind = ResolveStatementKind(node.Name);
-                    switch (kind)
-                    {
-                        case BreakingStatementKind.AlterTable:
-                            AnalyzeAlterTable(node.Value, reasons);
-                            break;
-                        case BreakingStatementKind.Rename:
-                            AnalyzeRename(node.Value, reasons);
-                            break;
-                        case BreakingStatementKind.Drop:
-                            reasons.Add("DROP statement changes existing schema");
-                            break;
-                        case BreakingStatementKind.Update:
-                            reasons.Add("UPDATE rewrites data");
-                            break;
-                    }
+                    case Syntax.PgSyntaxKind.AlterTableStatement:
+                        AnalyzeAlterTable(node.RawJson, reasons);
+                        break;
+                    case Syntax.PgSyntaxKind.RenameStatement:
+                        AnalyzeRename(node.RawJson, reasons);
+                        break;
+                    case Syntax.PgSyntaxKind.DropStatement:
+                        reasons.Add("DROP statement changes existing schema");
+                        break;
+                    case Syntax.PgSyntaxKind.UpdateStatement:
+                        reasons.Add("UPDATE rewrites data");
+                        break;
                 }
             }
 
             return reasons;
         }
-
-        private static BreakingStatementKind ResolveStatementKind(string nodeName) =>
-            nodeName switch
-            {
-                "AlterTableStmt" => BreakingStatementKind.AlterTable,
-                "RenameStmt" => BreakingStatementKind.Rename,
-                "DropStmt" => BreakingStatementKind.Drop,
-                "UpdateStmt" => BreakingStatementKind.Update,
-                _ => BreakingStatementKind.Unknown,
-            };
 
         private static void AnalyzeAlterTable(JsonElement alterTable, List<string> reasons)
         {

@@ -23,6 +23,7 @@ namespace SharpPgQuery.Syntax
                 { "AlterTableStmt",   PgSyntaxKind.AlterTableStatement },
                 { "DropStmt",         PgSyntaxKind.DropStatement },
                 { "IndexStmt",        PgSyntaxKind.CreateIndexStatement },
+                { "RenameStmt",       PgSyntaxKind.RenameStatement },
 
                 // Expressions
                 { "Integer",          PgSyntaxKind.IntegerLiteral },

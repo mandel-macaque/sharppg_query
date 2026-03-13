@@ -48,7 +48,7 @@ namespace SharpPgQuery.Syntax
                     continue; // leaf values – not represented as child nodes
 
                 var kind = SyntaxKindMap.Resolve(property.Name);
-                list.Add(new PgSyntaxNode(property.Value, parent, kind));
+                list.Add(new PgSyntaxNode(property.Value, parent, kind, property.Name));
             }
 
             return new PgSyntaxNodeList(list.ToArray());
