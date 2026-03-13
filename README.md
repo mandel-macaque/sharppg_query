@@ -25,32 +25,54 @@ The API follows patterns established by the [Roslyn SDK](https://github.com/dotn
 
 ## Installing libpg_query
 
-The NuGet package **already bundles** the compiled `libpg_query` native library for the supported platforms, so no manual installation is required when consuming the package.
+The NuGet package **embeds** the compiled `libpg_query` native library for each supported platform. The library is **not committed to this repository** — it is built from source as part of the `Pack` pipeline.
 
-If you are building the project from source, or want to use a system-wide installation, follow the instructions below.
+If you are consuming the published NuGet package, no manual installation is required.
 
-### Linux
+### Building from source (for contributors / CI)
+
+Use the `BuildNative` Cake Frosting target to automatically clone and compile libpg_query on the current platform:
 
 ```bash
-# Option A – build from source (recommended, ensures the correct version)
+./build.sh --target=BuildNative
+```
+
+This will:
+1. Clone [libpg_query](https://github.com/pganalyze/libpg_query) into `native/src/libpg_query/` (skipped if already present)
+2. Compile the static archive with `make`
+3. Link it into a shared library placed at `native/{rid}/libpg_query.{so,dylib}`
+
+Subsequent runs are **idempotent** — if the library already exists, the task skips immediately.
+
+You can also build the shared library manually if you prefer, and place it at the expected path:
+
+```
+native/
+  linux-x64/libpg_query.so
+  osx-x64/libpg_query.dylib
+  osx-arm64/libpg_query.dylib
+```
+
+#### Linux (manual)
+
+```bash
 git clone --depth 1 https://github.com/pganalyze/libpg_query.git
 cd libpg_query
 make
 
-# Build a shared library (.so) from the static archive produced by make
+# Build a shared library (.so) from the static archive
 gcc -shared -fPIC -o libpg_query.so \
     -Wl,--whole-archive libpg_query.a \
     -Wl,--no-whole-archive -lm
 
-# Install system-wide (optional)
-sudo install -m 644 libpg_query.so /usr/local/lib/libpg_query.so
-sudo ldconfig
+# Copy to the expected native directory
+mkdir -p ../native/linux-x64
+cp libpg_query.so ../native/linux-x64/
 ```
 
-### macOS
+#### macOS (manual)
 
 ```bash
-# Option A – build from source
 git clone --depth 1 https://github.com/pganalyze/libpg_query.git
 cd libpg_query
 make
@@ -60,20 +82,9 @@ gcc -dynamiclib -o libpg_query.dylib \
     -Wl,-all_load libpg_query.a \
     -lm
 
-# Install system-wide (optional)
-sudo install -m 644 libpg_query.dylib /usr/local/lib/libpg_query.dylib
-
-# Option B – Homebrew (if a formula is available)
-brew install libpg_query
-```
-
-Copy the resulting shared library into the appropriate folder so it is bundled into the NuGet package:
-
-```
-native/
-  linux-x64/libpg_query.so
-  osx-x64/libpg_query.dylib
-  osx-arm64/libpg_query.dylib
+# Copy to the expected native directory (adjust rid as appropriate)
+mkdir -p ../native/osx-arm64   # or osx-x64
+cp libpg_query.dylib ../native/osx-arm64/
 ```
 
 ---
@@ -124,7 +135,10 @@ The Frosting runner is a regular C# console project located in `build/`, so no g
 ### Common targets
 
 ```bash
-# Run tests (default target)
+# Build the native library from source (run once before anything else)
+./build.sh --target=BuildNative
+
+# Run tests (default target – also runs BuildNative if native lib is missing)
 ./build.sh
 
 # Compile the solution only
@@ -133,7 +147,7 @@ The Frosting runner is a regular C# console project located in `build/`, so no g
 # Run the xUnit test suite
 ./build.sh --target=RunTests
 
-# Create the NuGet package
+# Create the NuGet package (builds native lib + C# code, then packs)
 ./build.sh --target=Pack
 
 # Debug configuration
@@ -165,9 +179,10 @@ sharppg_query/
 ├── .husky/
 │   └── task-runner.json      # Git-hook task definitions (Husky.Net)
 ├── native/
-│   ├── linux-x64/            # libpg_query.so (Linux x86-64)
-│   ├── osx-x64/              # libpg_query.dylib (macOS Intel)
-│   └── osx-arm64/            # libpg_query.dylib (macOS Apple Silicon)
+│   ├── src/                  # (gitignored) libpg_query source, cloned by BuildNative
+│   ├── linux-x64/            # (gitignored) libpg_query.so — built by BuildNative
+│   ├── osx-x64/              # (gitignored) libpg_query.dylib — built by BuildNative
+│   └── osx-arm64/            # (gitignored) libpg_query.dylib — built by BuildNative
 └── src/
     ├── SharpPgQuery/         # Main library
     │   ├── PgQuery.cs        # Static entry points
