@@ -152,6 +152,9 @@ The Frosting runner is a regular C# console project located in `build/`, so no g
 
 # Debug configuration
 ./build.sh --target=RunTests --configuration=Debug
+
+# Generate the DocFX site
+./build.sh --target=Docs
 ```
 
 On Windows use `build.ps1` with the same arguments.
@@ -172,7 +175,7 @@ sharppg_query/
 │   ├── Build.csproj
 │   ├── Program.cs
 │   ├── BuildContext.cs
-│   └── Tasks/                # One file per Cake task
+│   └── Tasks/                # One file per Cake task (includes Docs target)
 ├── build.sh / build.ps1      # Bootstrap scripts (Unix / Windows)
 ├── SharpPgQuery.slnx         # Solution file
 ├── dotnet-tools.json         # Husky local tool
@@ -183,6 +186,7 @@ sharppg_query/
 │   ├── linux-x64/            # (gitignored) libpg_query.so — built by BuildNative
 │   ├── osx-x64/              # (gitignored) libpg_query.dylib — built by BuildNative
 │   └── osx-arm64/            # (gitignored) libpg_query.dylib — built by BuildNative
+├── docs/                     # DocFX project (generated site in docs/_site)
 └── src/
     ├── SharpPgQuery/         # Main library
     │   ├── PgQuery.cs        # Static entry points
