@@ -1,6 +1,8 @@
 using System;
 using Cake.Common;
+using Cake.Common.Tools.DotNet.Tool;
 using Cake.Core.IO;
+using Cake.Core.IO.Arguments;
 using Cake.Frosting;
 
 [TaskName("Docs")]
@@ -12,15 +14,21 @@ public sealed class DocsTask : FrostingTask<BuildContext>
     {
         var docfxConfig = context.Environment.WorkingDirectory.CombineWithFilePath("docs/docfx.json");
 
-        int exitCode = context.StartProcess("dotnet", new ProcessSettings
+        var settings = new DotNetToolSettings
         {
-            Arguments = $"docfx \"{docfxConfig.FullPath}\"",
             WorkingDirectory = context.Environment.WorkingDirectory
-        });
+        };
 
-        if (exitCode != 0)
-        {
-            throw new Exception($"DocFX exited with code {exitCode}.");
-        }
+        var runner = new DotNetToolRunner(context.FileSystem, context.Environment, context.ProcessRunner, context.Tools);
+
+        var restoreArgs = new ProcessArgumentBuilder();
+        restoreArgs.Append(new TextArgument("restore"));
+        runner.Execute(null, "tool", restoreArgs, settings);
+
+        var runArgs = new ProcessArgumentBuilder();
+        runArgs.Append(new TextArgument("run"));
+        runArgs.Append(new TextArgument("docfx"));
+        runArgs.Append(new TextArgument(docfxConfig.FullPath));
+        runner.Execute(null, "tool", runArgs, settings);
     }
 }
