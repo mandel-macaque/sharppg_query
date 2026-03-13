@@ -1,0 +1,71 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>netstandard2.0;net10.0</TargetFrameworks>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <RootNamespace>SharpPgQuery</RootNamespace>
+    <AssemblyName>SharpPgQuery</AssemblyName>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <PackageId>SharpPgQuery</PackageId>
+    <Version>1.0.0</Version>
+    <Authors>SharpPgQuery Contributors</Authors>
+    <Description>C# bindings for libpg_query - PostgreSQL SQL parser providing access to the SQL AST</Description>
+    <PackageTags>postgresql;sql;parser;ast;libpg_query</PackageTags>
+    <RepositoryType>git</RepositoryType>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <Deterministic>true</Deterministic>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+  </PropertyGroup>
+
+  <!-- System.Text.Json: built-in for net10.0, package reference for netstandard2.0 -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
+    <PackageReference Include="System.Text.Json" Version="9.0.3" />
+  </ItemGroup>
+
+  <!-- Native libraries bundled into the NuGet package -->
+  <ItemGroup>
+    <None Include="$(MSBuildThisFileDirectory)../../native/linux-x64/libpg_query.so"
+          Pack="true"
+          PackagePath="runtimes/linux-x64/native/libpg_query.so"
+          Condition="Exists('$(MSBuildThisFileDirectory)../../native/linux-x64/libpg_query.so')" />
+    <None Include="$(MSBuildThisFileDirectory)../../native/osx-x64/libpg_query.dylib"
+          Pack="true"
+          PackagePath="runtimes/osx-x64/native/libpg_query.dylib"
+          Condition="Exists('$(MSBuildThisFileDirectory)../../native/osx-x64/libpg_query.dylib')" />
+    <None Include="$(MSBuildThisFileDirectory)../../native/osx-arm64/libpg_query.dylib"
+          Pack="true"
+          PackagePath="runtimes/osx-arm64/native/libpg_query.dylib"
+          Condition="Exists('$(MSBuildThisFileDirectory)../../native/osx-arm64/libpg_query.dylib')" />
+    <None Include="$(MSBuildThisFileDirectory)../../README.md"
+          Pack="true"
+          PackagePath="\" />
+  </ItemGroup>
+
+  <!--
+    Copy native libs to the output directory so that P/Invoke resolution works
+    both for the library itself and for any project that references it.
+    The Condition-based ItemGroup ensures only the platform-appropriate lib is included.
+  -->
+  <ItemGroup Condition="$([MSBuild]::IsOSPlatform('Linux')) And Exists('$(MSBuildThisFileDirectory)../../native/linux-x64/libpg_query.so')">
+    <None Include="$(MSBuildThisFileDirectory)../../native/linux-x64/libpg_query.so"
+          CopyToOutputDirectory="PreserveNewest"
+          Link="libpg_query.so" />
+  </ItemGroup>
+
+  <ItemGroup Condition="$([MSBuild]::IsOSPlatform('OSX')) And Exists('$(MSBuildThisFileDirectory)../../native/osx-x64/libpg_query.dylib')">
+    <None Include="$(MSBuildThisFileDirectory)../../native/osx-x64/libpg_query.dylib"
+          CopyToOutputDirectory="PreserveNewest"
+          Link="libpg_query.dylib" />
+  </ItemGroup>
+
+  <ItemGroup Condition="$([MSBuild]::IsOSPlatform('OSX')) And Exists('$(MSBuildThisFileDirectory)../../native/osx-arm64/libpg_query.dylib')">
+    <None Include="$(MSBuildThisFileDirectory)../../native/osx-arm64/libpg_query.dylib"
+          CopyToOutputDirectory="PreserveNewest"
+          Link="libpg_query.dylib" />
+  </ItemGroup>
+
+</Project>
