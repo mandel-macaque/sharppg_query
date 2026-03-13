@@ -1,5 +1,5 @@
 ##########################################################################
-# Bootstrap script for Cake build on Windows (PowerShell)
+# Bootstrap script for Cake Frosting build on Windows (PowerShell)
 ##########################################################################
 [CmdletBinding()]
 Param(
@@ -12,8 +12,8 @@ $ErrorActionPreference = "Stop"
 
 Set-Location $PSScriptRoot
 
-# Restore dotnet local tools (Cake, Husky, …)
+# Restore dotnet local tools (Husky, …)
 dotnet tool restore
 
-# Forward arguments to Cake
-dotnet dotnet-cake build.cake --target=$Target --configuration=$Configuration --artifacts=$Artifacts @args
+# Run the Cake Frosting build project
+dotnet run --project build -- --target=$Target --configuration=$Configuration --artifacts=$Artifacts @args

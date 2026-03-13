@@ -1,4 +1,7 @@
 <Solution>
+  <Folder Name="/build/">
+    <Project Path="build/Build.csproj" />
+  </Folder>
   <Folder Name="/src/">
     <Project Path="src/SharpPgQuery.Tests/SharpPgQuery.Tests.csproj" />
     <Project Path="src/SharpPgQuery/SharpPgQuery.csproj" />

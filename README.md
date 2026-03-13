@@ -113,33 +113,40 @@ Console.WriteLine(normalized);
 
 ## Building
 
-The project uses [Cake](https://cakebuild.net/) as its build system.
+The project uses [Cake Frosting](https://cakebuild.net/docs/running-builds/runners/cake-frosting) as its build system.
+The Frosting runner is a regular C# console project located in `build/`, so no global tool installation is required.
 
 ### Prerequisites
 
-- [.NET SDK 10](https://dot.net/) (or any SDK listed in `global.json`)
+- [.NET SDK 8+](https://dot.net/) (the build project targets `net8.0`; the library targets `netstandard2.0` and `net10.0`)
 - C toolchain (`gcc`/`clang`, `make`) — only needed to build the native library from source
 
 ### Common targets
 
 ```bash
-# Run tests (default)
+# Run tests (default target)
 ./build.sh
 
-# Build only
+# Compile the solution only
 ./build.sh --target=Build
+
+# Run the xUnit test suite
+./build.sh --target=RunTests
 
 # Create the NuGet package
 ./build.sh --target=Pack
 
-# Run tests AND pack
-./build.sh --target=Publish
-
-# Release configuration
-./build.sh --target=Test --configuration=Release
+# Debug configuration
+./build.sh --target=RunTests --configuration=Debug
 ```
 
 On Windows use `build.ps1` with the same arguments.
+
+You can also invoke the Frosting runner directly:
+
+```bash
+dotnet run --project build -- --target=RunTests
+```
 
 ---
 
@@ -147,11 +154,14 @@ On Windows use `build.ps1` with the same arguments.
 
 ```
 sharppg_query/
-├── build.cake                # Cake build script
-├── build.sh / build.ps1      # Cake bootstrap scripts
+├── build/                    # Cake Frosting build project
+│   ├── Build.csproj
+│   ├── Program.cs
+│   ├── BuildContext.cs
+│   └── Tasks/                # One file per Cake task
+├── build.sh / build.ps1      # Bootstrap scripts (Unix / Windows)
 ├── SharpPgQuery.slnx         # Solution file
-├── .config/
-│   └── dotnet-tools.json     # Cake + Husky local tools
+├── dotnet-tools.json         # Husky local tool
 ├── .husky/
 │   └── task-runner.json      # Git-hook task definitions (Husky.Net)
 ├── native/
