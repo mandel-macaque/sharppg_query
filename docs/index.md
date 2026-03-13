@@ -1,5 +1,4 @@
----
-_layout: landing
+layout: landing
 title: SharpPgQuery
 ---
 
