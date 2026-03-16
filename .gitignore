@@ -56,6 +56,10 @@ nunit-*.xml
 # Cake
 .cake/
 
+# Documentation
+docs/_site/
+docs/api/
+
 # IDE
 .vs/
 .vscode/
