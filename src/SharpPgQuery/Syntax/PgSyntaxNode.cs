@@ -13,12 +13,14 @@ namespace SharpPgQuery.Syntax
     {
         private readonly JsonElement _element;
         private readonly PgSyntaxNode? _parent;
+        private readonly string? _name;
         private PgSyntaxNodeList? _children;
 
-        internal PgSyntaxNode(JsonElement element, PgSyntaxNode? parent, PgSyntaxKind kind)
+        internal PgSyntaxNode(JsonElement element, PgSyntaxNode? parent, PgSyntaxKind kind, string? name = null)
         {
             _element = element;
             _parent = parent;
+            _name = name;
             Kind = kind;
         }
 
@@ -27,6 +29,12 @@ namespace SharpPgQuery.Syntax
 
         /// <summary>Gets the parent node, or <c>null</c> if this is the root.</summary>
         public PgSyntaxNode? Parent => _parent;
+
+        /// <summary>
+        /// Gets the JSON property name that produced this node, when available.
+        /// For array elements or synthesized nodes, this may be <c>null</c>.
+        /// </summary>
+        public string? Name => _name;
 
         /// <summary>
         /// Gets whether this node represents a valid (non-error) part of the tree.

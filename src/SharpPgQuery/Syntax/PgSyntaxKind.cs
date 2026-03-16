@@ -50,6 +50,9 @@ namespace SharpPgQuery.Syntax
         /// <summary>A CREATE INDEX statement.</summary>
         CreateIndexStatement = 203,
 
+        /// <summary>A RENAME statement.</summary>
+        RenameStatement = 204,
+
         // ── Expressions ─────────────────────────────────────────────────────
 
         /// <summary>An integer literal.</summary>
