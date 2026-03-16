@@ -1,0 +1,154 @@
+name: Deploy
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  packages: write
+  id-token: write
+
+jobs:
+  build-native-linux:
+    name: Build native (Linux)
+    runs-on: ubuntu-latest
+    outputs:
+      rid: ${{ steps.detect-rid.outputs.rid }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.x
+            10.x
+
+      - name: Install native build dependencies
+        run: sudo apt-get update && sudo apt-get install -y gcc make
+
+      - name: Build native library
+        run: ./build.sh --target=BuildNative
+
+      - name: Detect RID
+        id: detect-rid
+        shell: bash
+        run: |
+          RID=$(find native -maxdepth 2 -mindepth 2 -name 'libpg_query.so' -print | head -n 1 | xargs dirname | xargs basename)
+          echo "rid=${RID}" >> "$GITHUB_OUTPUT"
+
+      - name: Upload native artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-${{ steps.detect-rid.outputs.rid }}
+          path: native/${{ steps.detect-rid.outputs.rid }}/libpg_query.so
+
+  build-native-macos:
+    name: Build native (macOS)
+    runs-on: macos-latest
+    outputs:
+      rid: ${{ steps.detect-rid.outputs.rid }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.x
+            10.x
+
+      - name: Install native build dependencies
+        run: brew install gcc make
+
+      - name: Build native library
+        run: ./build.sh --target=BuildNative
+
+      - name: Detect RID
+        id: detect-rid
+        shell: bash
+        run: |
+          RID=$(find native -maxdepth 2 -mindepth 2 -name 'libpg_query.dylib' -print | head -n 1 | xargs dirname | xargs basename)
+          echo "rid=${RID}" >> "$GITHUB_OUTPUT"
+
+      - name: Upload native artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-${{ steps.detect-rid.outputs.rid }}
+          path: native/${{ steps.detect-rid.outputs.rid }}/libpg_query.dylib
+
+  pack:
+    name: Pack & publish
+    runs-on: ubuntu-latest
+    needs:
+      - build-native-linux
+      - build-native-macos
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.x
+            10.x
+
+      - name: Install native build dependencies
+        run: sudo apt-get update && sudo apt-get install -y gcc make
+
+      - name: Download Linux native artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: native-${{ needs.build-native-linux.outputs.rid }}
+          path: native/${{ needs.build-native-linux.outputs.rid }}
+
+      - name: Download macOS native artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: native-${{ needs.build-native-macos.outputs.rid }}
+          path: native/${{ needs.build-native-macos.outputs.rid }}
+
+      - name: Pack NuGet
+        run: ./build.sh --target=Pack
+
+      - name: Upload package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nupkg
+          path: artifacts/*.nupkg
+
+      - name: Create GitHub release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref_name }}
+          release_name: SharpPgQuery ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+
+      - name: NuGet login (OIDC → temp API key)
+        uses: NuGet/login@v1
+        id: login
+        with:
+          user: ${{ secrets.NUGET_USER }}
+
+      - name: Push to NuGet
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: pwsh
+        run: |
+          Get-ChildItem artifacts -Filter *.nupkg | ForEach-Object {
+            dotnet nuget push $_.FullName `
+              --api-key "${{ steps.login.outputs.NUGET_API_KEY }}" `
+              --source https://api.nuget.org/v3/index.json
+          }
